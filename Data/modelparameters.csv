@@ -1,0 +1,12 @@
+,Estimate,Std_Error
+(Intercept),35.2632718,0.5321196
+sexM,14.1796247,0.4379012
+equipmentSingle-ply,3.4709687,0.3751015
+equipmentWraps,-1.309668,3.1656201
+age,-0.0065149,0.0114737
+bodyweight,0.2890032,0.0071735
+sexM:age,-0.0928014,0.0074915
+sexM:bodyweight,0.03712,0.004912
+equipmentSingle-ply:bodyweight,0.0206552,0.0045735
+equipmentWraps:bodyweight,0.0892475,0.0403018
+age:bodyweight,-0.0013089,0.0001568

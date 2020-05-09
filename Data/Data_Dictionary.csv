@@ -1,0 +1,16 @@
+variable_name,data_type,description
+name,character,Individual lifter name
+sex,character,Binary gender (M/F)
+event,character,The type of competition that the lifter entered - unique values are SBD(Squat Bench Deadlift) and B(Bench)
+equipment,character,"The equipment category under which the lifts were performed. Values such as Raw (Bare Knees or Sleeves), Wraps(with knee wraps) and Single-ply (single-ply suits)"
+age,double,"The age of the lifter on the start date of the meet, if known."
+age_class,character,"The age class in which the filter falls, for example 40-45"
+division,character,"Text describing the division of competition, like Open or Juniors 20-23 or Professional."
+bodyweight,double,"The recorded bodyweight of the lifter at the time of competition, to two decimal places."
+bodyweight_class,character,"The weight class in which the lifter competed, to two decimal places. Max specified by number and min specified by the symbol ""+"" to the right"
+best3squat,double,Maximum of the first three successful attempts for the lift - squat.
+best3bench,double,Maximum of the first three successful attempts for the lift - bench.
+best3deadlift,double,Maximum of the first three successful attempts for the lift - deadlift.
+position,character,"The recorded place of the lifter in the given division at the end of the meet. Special Values: G - Guest Lifter, DQ - Disqualified, DD - Doping Disqualification"
+meet_date,date,The date of the meet
+meet_name,character,The name of the meet without the year. Can be seen in conjuction with the date column
