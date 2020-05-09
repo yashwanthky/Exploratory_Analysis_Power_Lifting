@@ -1,0 +1,1479 @@
+---
+title: "Do you know how much you can lift?"
+author: "Yashwanth Kumar Y"
+date: "12/2/2019"
+output: 
+  html_document:
+    theme: united
+    highlight: tango
+    code_folding: show
+---
+
+<center>
+<div style="width:800px">
+![](Logo.jpg)
+</div>
+</center>
+
+# {.tabset .tabset-fade .tabset-pills}
+
+## **1. Introduction**
+
+<font size = "3"> 
+<br>
+**What is Power-lifting?**
+
+**Powerlifting** is the ultimate strength competition. The **International Powerlifting Federation** is the head of nearly 100 country federations world-wide. The powerlifts:- `squat, bench press and deadlift` are increasingly being recognized as principal exercises in the development of an individual's true strength. **But**, analyzing the factors affecting the power lifts forms the core of this project.
+
+**Problem Statement:**
+
+Analyze the various factors affecting the ability of the person to do power-lifting. This project is all about understanding this exciting and intense sport better. 
+
+Key questions that will be answered in this project are -
+
+* How is the weight lifted by a person being impacted by age?
+* How is the weight lifted by a person being impacted by gender?
+* Is age impacting the equipment being used to do powerlifting?
+* Which section of people are more likely to get disqualified?
+* How is age impacting different types of lifts such as bench, deadlift and squat?
+* How is gender impacting different types of lifts such as bench, deadlift and squat?
+* Is there a relationship between bodyweight and position?
+* How is the gender split in different meets? Is it changing over the years?
+* What is the distribution of different age classes in the meets? How it varies over the years?
+* Is the participation increasing over the years?
+* Is the average weight lifted increasing over the years?
+
+**Solution Overview/ Approach: **
+
+We will be using a subset of the **International Powerlifting Data** in this project. Once we are done with the tedious but necessary task of data cleaning, we plan to perform univariate/ multi-variate analysis of the various attributes affecting the performance of the individual.We will also look at scatter plots and histograms broken down by multiple filters to be able to visually comprehend the influence of different attributes on the performance. We will also perform hypothesis testing to see if few of the relationships are statistically significant.
+
+Finally, the relation will be explained with the help of a regression model which will give us a mathematical equation of the relationship between independent variables such as age, gender, body weight with the response variable - "ability to lift" across different divisions and world wide meets.
+
+
+In short - this report aims to equip the consumer with the ability to guesstimate and be able to explain the lifting capacity of an individual, when provided with certain basic data points such as gender, age, bodyweight etc. </font>
+
+## **2. Packages Required**
+
+
+<br>
+<font size="3">The packages we will be using for this project are - </font>
+
+```{r Packages, message = FALSE, warning = FALSE}
+library(tidyverse)  # To clean data, filter, subset, plot graphs (ggplot2), organize data in nicer data formats using tibble 
+library(DT)         # To display the data in a clean table format with options to select/ de-select columns
+library(knitr)      # To display the data in a clean table format, helps with commands such as head
+library(plotly)     # For interacticve plots
+library(lattice)    # To plot multiple clean looking graphs
+library(broom)      # To get the regression output in a neat table format
+library(car)        # To calculate variance inflation factor (VIF()) while fitting a multiple regression model
+library(stringr)    # To handle character strings better
+library(lubridate)  # For handling date and time columns
+library(dvmisc)     # To calculate RMSE (Root Mean Square Error)
+library(MASS)       # To use boxcox transformation on the response variable
+```
+
+<font size ="3">  All the packages required to run the document have been loaded. </font>
+
+## **3. Data Preparation**
+
+
+<br>
+<font size ="3"> This section talks about the various steps involved from importing the data set to the cleaning of data set. Each step of this process has been explained and the corresponding code has been shown. An option has been provided to hide the code if the reader wishes to skip reading the code. All the tables have been provided with a HTML scrollable format of the data. This will help us filter and check only the columns of interest using the option *“Column Visibility”* in addition to the *"Search bar"* given on top of the table.
+
+At the end of this step, the data set will be ready to use for the analysis. </font>
+
+### {.tabset .tabset-fade .tabset-pills}
+
+#### **3.1 Data Source and Explanation**
+
+<font size="3"> The data set that is being used in this project can be found on 
+the github page: [IPF Cleaned Dataset](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-10-08) 
+*(Note - This link works only when opened in a new window)*
+
+The original source of the data set which is a much larger dataset can be found at: [Open Powerlifting](https://openpowerlifting.org/data)
+
+This data set aims to create an accessible, accurate and open archive of the world's powerlifting data. The original dataset is being updated every month, but the data set we are using for this project is last collected on September 20th 2019 and consists of data until August 26th 2019.
+
+The dataset we are using in this project contains `41,152 observations` with `16 variables` having information on player's gender, age, weight, lifting capacity, event participated and the date of the meet. We notice that the missing values have been recorded as `"NA"`. Some data entries to call out are negative values in the weight lifted variables which indicate failed attempts. The dataset also contains information on people who were disqualified and guest lifters i.e. people who succeeded but aren't eligible for awards.
+
+Our preliminary observation suggests there might be few data entry errors, outlier values and irrelavant columns for the analysis, which have been dealt with in the subsequent data cleaning steps.
+
+</font>
+
+#### **3.2 Importing Dataset and Preliminary Checks**
+
+<font size="3">First, let us start with the important step of importing our dataset - </font>
+
+```{r reading datset, warning=FALSE, message=FALSE}
+ipf <- read.csv("IPF.csv",stringsAsFactors = FALSE)
+str(ipf)
+```
+
+<font size="3">From the structure, we notice that the dataset has `41,152 rows` and `16 columns` - the dataset has been imported correctly. We see that the column names are appropriate and have suitable datatype assigned except for the column **"date"**, which is in *character* format.
+
+We change the class of **Date** variable to date format</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf$date <- as.Date(ipf$date)
+```
+
+<font size="3">Checking the structure again to verify if the command worked and new NA's are
+not introduced.</font>
+
+```{r warning=FALSE, message=FALSE}
+str(ipf)
+colSums(is.na(ipf))
+```
+
+<font size="3">Let us see if the data is unique at this level -</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf <- unique(ipf)
+```
+
+<font size="3">As there is no change in the number of observations, the data is unique at this
+level.
+
+Let us also rename the column **'place'** to **'position'** to make it more intuitive. Also we are getting rid of the suffix *"kg"* for few columns-</font>
+
+```{r}
+names(ipf)
+colnames(ipf)[13] <- "position"
+colnames(ipf)[8] <- "bodyweight"
+colnames(ipf)[9] <- "weight_class"
+colnames(ipf)[10] <- "best3squat"
+colnames(ipf)[11] <- "best3bench"
+colnames(ipf)[12] <- "best3deadlift"
+colnames(ipf)[14] <- "meet_date"
+names(ipf)
+```
+
+<font size="3">Now, we have fixed the datatype and column names -  Let's move ahead!
+
+We will remove the column **'federation'** as it has only one unique value and would
+not add any value to the analysis</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf <- ipf[,-15]
+dim(ipf)
+datatable(head(ipf) ,extensions = 'Buttons', selection = list(mode="multiple", selected = c(1,3,5), target = 'column') ,options = list(dom = 'Bfrtip', buttons = I('colvis')))
+```
+
+<font size="3">Among the columns, **age** and **age_class**, we might only use either of them for our
+analysis. Also, as age groups are randomly distributed in this column, we might
+not use this column and might just stick to using the **age** column but let us not
+remove any of the columns now, which might turn out useful for the analysis later.
+
+One possible way the **age_class** column would be helpful is to look at the 
+distributions across multiple classes as this has only 16 unique values, 
+we will retain this column for now. </font>
+
+```{r warning=FALSE, message=FALSE}
+unique(ipf$age_class)
+```
+
+<font size="3">We see that one particluar class is wrongly named - so renaming **age class** of 
+*80-999* to *80-99*, but however as all age groups are randomly distributed, we 
+might not use this column and might stick to just using the **age** column.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf <- mutate(ipf,age_class = ifelse(age_class == "80-999","80-99",age_class))
+unique(ipf$age_class)
+```
+
+<font size="3">Let us check for any similar outlier in the **weight_class** column:</font>
+
+```{r}
+unique(ipf$weight_class)
+```
+
+<font size="3">For **Weight class** column, the groups are again randomly distributed with multiple
+classes and this column might not be useful when we try to correlate the amount
+of weight lifted with the weight column.
+However, we will try to standardize the **weight class** column as it has 
+too many classes. Let us create a new column with equal spaced buckets.</font>
+
+```{r warning=FALSE, message=FALSE}
+(labs <- c("1-10","10-20","20-30","30-40","40-50","50-60","60-70","70-80",
+           "80-90","90-100","100-110","110-120","120-130","130-140","140-150",
+           "150-160","160-170","170-180","180-190","190-200","200-210","210-220"
+           ,"220-230","230-240","240+"))
+ipf$bodyweight_class <- cut(ipf$bodyweight, breaks = c(seq(0, 240, 
+                            by = 10), Inf),labels = labs, right = FALSE)
+unique(ipf$bodyweight_class)
+```
+
+<font size="3">Now, we will look at the summary statistics of the numeric variables. This will help us understand how the values are 
+distributed in these columns:</font>
+
+```{r warning=FALSE, message=FALSE}
+summary(ipf$age)
+summary(ipf$bodyweight)
+summary(ipf$best3squat)
+summary(ipf$best3bench)
+summary(ipf$best3deadlift)
+```
+
+<font size="3"> Let us also check for missing values before we determine what our next steps should be - </font>
+
+```{r warning=FALSE, message=FALSE}
+colSums(is.na(ipf))
+```
+
+<font size="3">Having looked at the numerical summaries,
+we see that the data does have both extreme values and missing values. We will 
+have to clean this dataset further, so let us deal with each of these variables 
+separately in the next step of the data cleaning process.</font>
+
+#### **3.3 Missing Value and Outlier Treatment**
+
+<font size = "3"> We observe that there are missing values in multiple columns, 
+we decide to clean the data by selecting each of the column and check for 
+*outliers* and *missing values*.
+
+For Columns - `weight_class` and `bodyweight`
+
+As **Weight Class** column has only one missing value, we remove it as it doesn't
+add any value. </font>
+
+```{r warning=FALSE, message=FALSE}
+ipf <- ipf[!is.na(ipf$weight_class),]
+unique(ipf$weight_class)
+```
+
+<font size="3">Missing value for the **Weight Class** column has been removed.
+
+We can impute for missing values of **bodyweight** from the column weight class but 
+again, this wouldn't make much sense as the **weight class** is a range and the 
+tradeoff is making data available for just *187 rows (~0.5% of data)* that too with 
+error after a lot data computation. So, we just go ahead and remove these rows.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf <- ipf[!is.na(ipf$bodyweight),]
+```
+```{r}
+colSums(is.na(ipf))
+```
+
+<font size="3">We also see that the missing values for **Body Weight** column have been removed.
+Also, as we do not get any additional information from the  old column - **"weight_class"**, So we just
+get rid of this column and see if the dataset is unique at this level.</font>
+
+```{r warning=FALSE, message=FALSE}
+colnames(ipf)
+ipf <- ipf[,-9]
+ipf <- unique(ipf)
+```
+
+<font size="3">Let us check for outliers in the column **bodyweight** now, </font>
+
+```{r warning=FALSE, message=FALSE}
+boxplot(ipf$bodyweight, main="Boxplot for Bodyweight", col='powderblue',
+        whiskcol="#4900FFFF",
+        medcol="#0092FFFF",
+        staplecol="#0024FFFF",
+        outcol="#FF000099")
+```
+
+<font size="3">As We observe that there are lot of outliers in the higher quartile,let us 
+follow the **standard 1.5(IQR) approach** to deal with the outliers</font>
+
+```{rwarning=FALSE, message=FALSE}
+(outlier_bodyweight <- quantile(ipf$bodyweight, c(0.75), na.rm = TRUE) + 
+    (1.5 * IQR(ipf$bodyweight, na.rm = TRUE)))
+```
+
+<font size="3">We check for outliers in the **body weight** column above `153.25` to see the number
+of rows that have the value of `153.25` and above</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_outlier_bodyweight <- filter(ipf,bodyweight >  153.25)
+```
+
+<font size="3">We observe that there are `410` observations. We decide to go ahead and remove
+these observations</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf <-  ipf %>% 
+  filter((bodyweight <= 153.25) %>% replace_na(TRUE))
+```
+
+<font size="3">For Columns - `age` and `age class`
+
+We will check if we can derive the missing values from either of the 2 columns
+**age and age class**. </font>
+
+```{r warning=FALSE, message=FALSE}
+colSums(is.na(ipf))
+ipf_age_check <- ipf[is.na(ipf$age_class),c(5,6)]
+```
+
+<font size="3">We observe that there are `2823` and `2801` missing values in the columns **age** and 
+**age class**.</font>
+
+```{r warning=FALSE, message=FALSE}
+sum(ipf_age_check$age,na.rm = T)
+filter(ipf_age_check,ipf_age_check$age == 0.5)
+```
+
+<font size="3">From the row with value equal to `0.5`, we cannot infer anything
+meaningful i.e., we will not be able to impute the missing values from this column and this could
+a data entry error. 
+
+Now, as we cannot infer the value of age from this, it doesn't make sense to
+impute these values. So we decide leave these rows as it is and We will not 
+remove these rows as we would lose **~7%** of the data if we do so, also we can use
+the information from other columns for these rows.</font>
+
+```{r warning=FALSE, message=FALSE}
+class(ipf$age)
+```
+
+<font size = "3">Now, let us look at the outliers for the column **age**.</font>
+
+```{r warning=FALSE, message=FALSE}
+boxplot(ipf$age,main="Boxplot for Age",col='powderblue',
+        whiskcol="#4900FFFF",
+        medcol="#0092FFFF",
+        staplecol="#0024FFFF",
+        outcol="#FF000099")
+```
+
+<font size="3">We notice that there are lot of outliers in the extremities of higher scale. </font>
+
+```{r warning=FALSE, message=FALSE}
+(outlier_age <- quantile(ipf$age, c(0.75), na.rm=TRUE) + 
+    (1.5*IQR(ipf$age, na.rm = TRUE)))
+```
+
+<font size="3">We check for outliers above the age of `80` in the **age** column and let us see how
+many rows have a value of `80` and above. </font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_greater80 <- filter(ipf,ipf$age >  80)
+```
+
+<font size="3">We decide to remove these rows where the age is greater than `80` - as we only
+have `41` observations. Also we get rid of the observation, where age is *0.5*, which seems to be a clear anomaly.
+Also, we will get rid of the row in which the age class is mentioned as *"5-12"* as it has only one record.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf <-  ipf %>% 
+         filter((age <= 80) %>% replace_na(TRUE))
+ipf <- ipf %>% 
+       filter(age != 0.5 | is.na(age))
+ipf <- ipf %>% 
+  filter(age_class != "5-12" | is.na(age_class))
+colSums(is.na(ipf))
+```
+
+<font size="3">For the **division** column, there are `610` missing values and we can impute them if
+the distribution of age within classes is consistent. This doesn't seem to be
+the case here and hence these values cannot be imputed.
+
+However, We will not remove the missing values now as we are not sure if this 
+variable will be used in the analysis. Also, considering the number of NA 
+*(~1.5% of the total data)*, we decided to leave them as it is. Another major 
+reason is that these values belong to the time period between **1985-1994**, which
+could be useful information from other columns while doing the analysis.
+
+Also, let us look at the unique values and count for each of the type of event. </font>
+
+```{r warning=FALSE, message=FALSE}
+table(ipf$event)
+```
+
+<font size="3">As we have only `2` observations for **SB**, we can and hence can remove these 
+observations. The rationale for removing is that 2 is a very small number to
+understand pattern or draw insights from.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf <- ipf %>% 
+  filter((event != "SB") %>%  replace_na(TRUE))
+```
+
+<font size="3">Now, we are left with 3 numeric columns - *best3squat, best3bench and 
+best3deadlift*.</font>
+
+```{r warning=FALSE, message=FALSE}
+colSums(is.na(ipf))
+```
+
+<font size="3">Although we have approximately *13,500* and *13,800* missing values for **squat** and
+**deadlift**, we are not really concerned about them as a majority of them fall under a particuar
+event **"B"**, where they are not supposed to have these values.This is shown below</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_checkB <-  ipf %>% 
+               filter(event != 'B' %>% replace_na(TRUE))
+colSums(is.na(ipf_checkB))
+```
+
+<font size="3">Now, We observe that the resulting dataset with the event type as **"SBD"** has 
+approximately *1100* to *1500* missing values as compared to the previously seen
+~13k missing values.
+So, we subset the dataset into 2 datasets, one for Bench and one for SBD</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_Bench <- ipf %>% 
+            filter(event == 'B' %>%  replace_na(TRUE))
+ipf_SBD <- ipf %>% 
+  filter(event == 'SBD' %>%  replace_na(TRUE))
+```
+
+<font size="3">Now, we will have to look at the 3 variables - Bench, Deadlift 
+and Squat for treatment.
+
+However, only the variable `bench` for the dataset **ipf_Bench**,</font>
+
+```{r warning=FALSE, message=FALSE}
+boxplot(ipf_Bench$best3bench, main="Boxplot for Best3bench",col='powderblue',
+        whiskcol="#4900FFFF",
+        medcol="#0092FFFF",
+        staplecol="#0024FFFF",
+        outcol="#FF000099")
+(outlier_bench <- quantile(ipf_Bench$best3bench, c(0.75), na.rm = TRUE) + 
+      (1.5 * IQR(ipf_Bench$best3bench, na.rm = TRUE)))
+```
+
+<font size="3">We observe that there are outliers above the **best3bench** of `347.5`. Let us see
+how many rows have value above `347.5`.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_outlier_bench <- filter(ipf_Bench,best3bench >  347.5) 
+```
+
+<font size="3">We decide to remove these rows where the value is above `347.5` as we have 
+*22* observations only.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_outlier_bench_lesszero <- filter(ipf_Bench,best3bench < 0, 
+                                       replace_na(TRUE))
+```
+
+<font size="3">We Check for outliers for negative values and observed that we do not have any.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_Bench <-  ipf_Bench %>% 
+  filter((best3bench <= 347.5) %>% replace_na(TRUE))
+```
+
+<font size="3">Now, let us proceed to look at the other dataset where we have 
+observations for all the 3 variables - Squat, Deadlift and Bench i.e. we will
+look at the dataset **ipf_SBD**.
+
+For `bench` in event **SBD**,</font>
+
+```{r warning=FALSE, message=FALSE}
+boxplot(ipf_SBD$best3bench,main="Boxplot for Best3bench",col='powderblue',
+        whiskcol="#4900FFFF",
+        medcol="#0092FFFF",
+        staplecol="#0024FFFF",
+        outcol="#FF000099")
+```
+
+<font size="3">We observe that there are outliers at both the extremities. Although, we have a
+reason for the existence of negative values, we go ahead and remove them as they 
+are supposed to be rare events with very limited number of observations for us to draw any
+conclusions or insights.</font>
+
+```{r warning=FALSE, message=FALSE}
+(outlier_bench_SBD_upper <- quantile(ipf_SBD$best3bench, c(0.75), na.rm = TRUE) + 
+    (1.5 * IQR(ipf_SBD$best3bench, na.rm = TRUE)))
+
+(outlier_bench_SBD_lower <- quantile(ipf_SBD$best3bench, c(0.25), na.rm = TRUE) - 
+    (1.5 * IQR(ipf_SBD$best3bench, na.rm = TRUE)))
+```
+
+<font size="3">We see outliers above `292.5` and below `-27.5`, let us see check for
+number of rows having values above `292.5` and below `-27.5`.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_outlier_bench_SBD <- filter(ipf_SBD,best3bench >  292.5 |
+                                best3bench < -27.5,replace_na(TRUE)) 
+```
+
+<font size="3">There are `151` observations and we decide to remove these rows where the value is
+above `292.5` and below `-27.5`.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_SBD <-  ipf_SBD %>% 
+  filter((best3bench <= 292.5 & best3bench >= -27.5) %>% 
+           replace_na(TRUE))
+```
+
+<font size="3">For `squat` in event **SBD**,</font>
+
+```{r warning=FALSE, message=FALSE}
+boxplot(ipf_SBD$best3squat,main="Boxplot for Best3squat",col='powderblue',
+        whiskcol="#4900FFFF",
+        medcol="#0092FFFF",
+        staplecol="#0024FFFF",
+        outcol="#FF000099")
+```
+
+<font size="3">Again, we notice that there are outliers on both positive and negative ends.</font>
+
+```{r warning=FALSE, message=FALSE}
+(outlier_squat_SBD_upper <- quantile(ipf_SBD$best3squat, c(0.75), na.rm = TRUE) + 
+    (1.5 * IQR(ipf_SBD$best3squat, na.rm = TRUE)))
+
+(outlier_squat_SBlower <- quantile(ipf_SBD$best3squat, c(0.25), na.rm = TRUE) - 
+    (1.5 * IQR(ipf_SBD$best3squat, na.rm = TRUE)))
+```
+
+<font size="3">Here, we observe outliers above `422.5` and below `2.5`, let us check for the number
+of rows that have values above `422.5` and below `2.5`.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_outlier_squat_SBD <- filter(ipf_SBD,best3squat >  422.5 | 
+                                  best3squat < 2.5,replace_na(TRUE))
+```
+
+<font size="3">There are `25` observations and we decide to remove these observations.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_SBD <- ipf_SBD %>% 
+  filter((best3squat <= 422.5 & best3squat >= 2.5) 
+         %>% replace_na(TRUE))
+```
+
+<font size="3">For `deadlift` in event **SBD**,</font>
+
+```{r warning=FALSE, message=FALSE}
+boxplot(ipf_SBD$best3deadlift,main="Boxplot for Best3deadlift",col='powderblue',
+        whiskcol="#4900FFFF",
+        medcol="#0092FFFF",
+        staplecol="#0024FFFF",
+        outcol="#FF000099")
+```
+
+<font size="3">We notice that there are outliers only in the lower extremity. However, let us check on both extremities for outliers and also the number of rows that have value above `420` and below `20`.</font>
+
+```{r warning=FALSE, message=FALSE}
+(outlier_deadlift_SBD_upper <- quantile(ipf_SBD$best3deadlift, c(0.75), na.rm = TRUE) 
+  + (1.5 * IQR(ipf_SBD$best3deadlift, na.rm = TRUE)))
+
+(outlier_deadlift_SBD_lower <- quantile(ipf_SBD$best3deadlift, c(0.25), na.rm = TRUE) 
+  - (1.5 * IQR(ipf_SBD$best3deadlift, na.rm = TRUE)))
+```
+
+```{r warning=FALSE, message=FALSE}
+ipf_outlier_deadlift_SBD <- filter(ipf_SBD,best3deadlift >  420 | 
+                                best3deadlift < 20,replace_na(TRUE))
+```
+
+<font size="3">There are `3` observations and We decide to get rid of these observations.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_SBD <- ipf_SBD %>% 
+  filter((best3deadlift <= 420 & best3deadlift >= 20) %>% 
+           replace_na(TRUE))
+```
+
+<font size="3">As we evaluated the event types separately to avoid removal of values that are 
+not outliers within a specific group, we will now combine them to form the final
+dataset and reorder the columns.</font>
+
+```{r warning=FALSE, message=FALSE}
+ipf_main <- rbind(ipf_Bench,ipf_SBD)
+ipf_main <- ipf_main[,c(1:8,15,9:14)]
+```
+
+<font size="3"> Performing few sanity checks on the combined dataset and 
+displaying the head for the final dataset we will be using for the analysis </font>
+
+```{r warning=FALSE, message=FALSE}
+datatable(head(ipf_main) ,extensions = 'Buttons', selection = list(mode = "multiple", selected = c(1,3,5), target = 'column') ,options = list(dom = 'Bfrtip', buttons = I('colvis')))
+ipf_main <- unique(ipf_main)
+```
+
+<font size="3">Finally, after cleaning the dataset, we are left with a dataframe of dimensions **`r dim(ipf_main)`**
+
+Let us look at the summary statistics for the numerical variables:
+
+**age**: The minimum and maximum values are **13.5** and **80** after removing
+~40 outlier observations. The descriptive statistics are shown below:
+
+```{r warning=FALSE, message=FALSE}
+summary(ipf_main$age)
+```
+
+**bodyweight**: The minimum and maximum values are **37.29** and **94.80** after
+removing ~410 outlier observations. The descriptive statistics are column is
+shown below:
+
+```{r warning=FALSE, message=FALSE}
+summary(ipf_main$bodyweight)
+```
+
+**best3squat**: The minimum and maximum values are **25** and **422.5** after
+removing ~25 outlier observations. The descriptive statistics are column is
+shown below:
+
+```{r warning=FALSE, message=FALSE}
+summary(ipf_main$best3squat)
+```
+
+**best3bench**: The minimum and maximum values are **25** and **347.5** after
+removing ~170 outlier observations. The descriptive statistics are column is
+shown below:
+
+```{r warning=FALSE, message=FALSE}
+summary(ipf_main$best3bench)
+```
+
+**best3deadlift**: The minimum and maximum values are **25** and **420** after
+removing ~3 outlier observations. The descriptive statistics are column is
+shown below:
+
+```{r warning=FALSE, message=FALSE}
+summary(ipf_main$best3deadlift)
+```
+
+From the summary statistics of the numeric columns, we observe that the distribution
+of the data points for the variables is not skewed as the difference between
+**Mean** and **Median** is minimal.</font>
+
+#### **3.4 Final summary of the Dataset**
+
+<font size="3"> A few comments on the dataset -
+
+* We have removed outliers and treated NA's to a major extent  
+
+  * There might still be some outliers but due to limited context on data, we refrain from removing these values
+
+
+* For the column - **"age"**, we could have derived some of the NA values from the column **"age_class"**
+
+  * However, this involves a series of data transformations and we observed that **~10%** of NA values will be fixed despite this
+  * As we already have **~37k** values, these NA values for age should not cause us any trouble
+  * So, we do not perform any treatment as the trade off is low for the amount of computation we perform
+  
+* Although we will not be using the **"name"** column in our analysis - we will retain this column in the main dataset due to the following reason
+
+  * During the course of analysis, when we subset the data and come across any interesting finding which is particular to a small sub-set of the population, this column will help us identify these observations 
+  
+  
+</font>
+  
+<font size = "3"> **Data Dictionary:**  </font>
+
+
+```{r Data Dictionary}
+data_dictionary <- read.csv("Data_Dictionary.csv",stringsAsFactors = FALSE)
+kable(data_dictionary)
+```
+
+
+## **4. Exploratory Data Analysis**
+
+
+<br>
+<font size ="3"> We have structured this section into 3 parts - 
+
+* The first part deals with distribution of the variables and check for any exceptions stand out after our data cleaning step
+* Next, we look at how different variables such as age, bodyweight, sex affect powerlifting. Each of the variables are visualized at different granularities. Also, each of the visualization is followed by a note on the findings from the graph.
+* In the final step, we built a model which shows the mathematical relation of how different variables affect the total weight lifted by the powerlifter. This relation can be used to predict the powerlifting capacity of the powerlifter with ~75% accuracy.
+
+</font>
+
+### {.tabset .tabset-fade .tabset-pills}
+
+#### **4.1 Variable Distributions**
+
+<font size = 3> 
+
+Firstly, let us look at the distributions of the numeric variables: Age, Bodyweight, Best3squat, Best3bench & Best3deadlift.
+
+Distribution for **Age** Variable :-
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main, aes(age)) + 
+  geom_histogram(binwidth = 5, col = I("violet"), fill = I("brown")) + 
+  ggtitle("Distribution of age") +
+  labs(x = "Age", y = "Frequency") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+We notice a right skewed distribution and most of the participation instances are by people of age ~20.
+
+Distribution for **Bodyweight** Variable :-
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main, aes(bodyweight)) + 
+  geom_histogram(binwidth = 5, col = I("violet"), fill = I("brown")) +
+  ggtitle("Distribution of Bodyweight") +
+  labs(x = "Bodyweight", y = "Frequency") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+A majority of participants have their weights between 40 and 100.
+
+Distribution for **Best3squat** Variable :-
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main, aes(best3squat)) + 
+  geom_histogram(binwidth = 5, col = I("violet"), fill = I("brown")) +
+ggtitle("Distribution of Best3squat") +
+  labs(x = "Best3squat", y = "Frequency") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Most of them lift between 100kgs and 300 kgs in the squat category and the distribution closely resembles that of a normal distribution.
+
+Distribution for **Best3bench** Variable.
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main, aes(best3bench)) + 
+  geom_histogram(binwidth = 5, col = I("violet"), fill = I("brown")) +
+  ggtitle("Distribution of Best3bench") +
+  labs(x = "Best3bench", y = "Frequency") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Most of them lift between 70kgs and 200 kgs in the bench press category and the distribution is slightly skewed towards the right.
+
+Distribution for **Best3deadlift** Variable.
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main, aes(best3deadlift)) + 
+  geom_histogram(binwidth = 5, col = I("violet"), fill = I("brown")) + 
+  ggtitle("Distribution of Best3deadlift") +
+  labs(x = "Best3deadlift", y = "Frequency") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Most of them lift between 120kgs and 320 kgs in the deadlift category and the distribution closely resembles that of a normal distribution.
+
+**Character Variables:-**
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main, aes(x = sex)) +
+  geom_bar() +
+  ggtitle("Male vs Female participants") +
+  labs(x = "Sex",y = "Number of Observations") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(data = ipf_main, aes(x = event)) +
+  geom_bar() +
+  ggtitle("Split between events") +
+  labs(x = "Event",y = "Number of Observations") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(data = ipf_main, aes(x = equipment)) +
+  geom_bar() +
+  ggtitle("Split between equipments") +
+  labs(x = "Equipment",y = "Number of Observations") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+A  quick summary of the few important character variables  tells us that we almost have double the number of observations for males as compared to females. This is the same case with equipment where SBD has ~2X number of observations as comapred to the event B. 
+
+We also notice that the equipment "single ply" has the most available information while Wraps has too less information for analysis.
+
+</font>
+
+#### **4.2 Understanding Behavior of Variables**
+
+<font size = "3">
+
+We will center our EDA on the distribution of variables such as age, bodyweight, equipment and how they impact the weight lifted by individuals. 
+
+Let us analyze how the factors like Age and Sex are affecting the weight lifting capacity. 
+
+For this, we decided to subset the dataset by event "SBD" and create a new variable for the total weight lifted in the three events i.e., Bench, Squat and Deadlift after replacing the missing values with zero.
+
+```{r warning=FALSE, message=FALSE}
+ipf_main_SBD <- ipf_main %>% 
+  filter(event == "SBD")
+ipf_main_SBD$best3squat <- ipf_main_SBD$best3squat %>% 
+  replace_na(0)
+ipf_main_SBD$best3bench <- ipf_main_SBD$best3bench %>% 
+  replace_na(0)
+ipf_main_SBD$best3deadlift <- ipf_main_SBD$best3deadlift %>% 
+  replace_na(0)
+ipf_main_SBD <- ipf_main_SBD %>% 
+  mutate(total_weight <- best3squat + best3deadlift + best3bench)
+colnames(ipf_main_SBD)[16] <- "totalweight"
+ipf_main_SBD <- filter(ipf_main_SBD,totalweight > 0)
+```
+
+Let us now plot a scatterplot to look at the impact of age on total weight lifted.
+
+```{r warning = FALSE, message=FALSE}
+ggplot(data=ipf_main_SBD, aes(age,totalweight)) +
+  geom_point() +
+  geom_smooth(method = "auto") +
+  ggtitle("Impact of age on total weight lifted") +
+  labs(x = "Age", y = "Total Weight Lifted") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+From the above Scatterplot, we observe that the weight lifting capacity is higher among the age groups between 20 to 40 and then, we can observe a downward trend from there on. Though there's downward trend with the increase in age, it's interesting to see that people lying in the age group 60-80 are **still** able to lift weights of ~600 kgs too.
+
+Let us now do a scatterplot to look at the impact of age on different types of lift - best3squat, best3bench & best3deadlift.
+
+```{r  warning=FALSE, message = FALSE}
+
+ipf_main %>% 
+  filter(event == "SBD") %>% 
+  dplyr::select(name, age, best3squat, best3bench, best3deadlift) %>% 
+  group_by(name, age) %>% 
+  gather(Type, weights, 3:5) %>% 
+  ggplot(aes(x = age, y = weights)) + 
+  geom_point(alpha = 0.12) + 
+  geom_smooth(method = 'auto') +
+  facet_wrap(~ Type, nrow = 1) +
+  labs(x = "Age", y = "Weight Lifted") +
+  ggtitle("Overall distribution of age with weight lifted for different types of lifts") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+The decline in the lifting capacity is almost same across all 3 types of lifts. However, squat shows a sharper decline in the lifting capacity after the age of 40 as compared to the gradual decline in the other 2 types of lifts.
+
+Now, let us use a scatterplot to look at the variance in weight lifting capacities between male and female powerlifters
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main_SBD, aes(age,totalweight)) + 
+  geom_point(alpha = 0.2) +
+  facet_wrap(~sex) +
+  geom_smooth(method = "auto") +
+  ggtitle("Impact of Age among male and female powerlifters on total weight lifted") +
+  labs(x = "Age", y = "Total Weight") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+We can observe that the weight lifting capacities are higher in male powerlifters than female powerlifters. Especially, when we compare male and female powerlifters for age group between 20 and 40, the total weight lifted is around 1000 kgs for males and 700 kgs for females. 
+
+One interesting thing is that we see a downward trend in weight lifting capacities for females starting at the age of 30 yrs and for males it starts slightly later at the age of 35 yrs. The powerlifters from both the genders are able to lift reasonably higher weights even after an age of 60 yrs.
+
+Now, let us understand how the lifting capacity varies by different lifts.
+
+```{r Gender impacting weight lifted, warning=FALSE, message = FALSE}
+
+ipf_main %>% 
+  filter(event == "SBD") %>% 
+  dplyr::select(name, age, sex, c(10:12)) %>% 
+  group_by(name, age, sex) %>% 
+  gather(Type, weights, 4:6) %>% 
+  ggplot(aes(x = age, y = weights)) + 
+  geom_point(alpha = 0.12) + 
+  geom_smooth(method = 'auto') +
+  facet_grid(sex ~ Type) +
+  labs(x = "Age", y = "Total Weight") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("Distribution of age by gender for different types of weight lifting")
+
+```
+
+The weight lifted in squat seems to be the most impacted by gender in terms of the weight lifted, although there is a very big impact of gender on the weight lifted overall. Also the weight lifted starts to decline with age faster for females as compared to males by a small margin, this is more evident in the cases of deadlift and squat.
+
+Let us observe if age is related to the equipment usage in powerlifting. For this, let us look at the distribution of age classes for each of the equipments being used.
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main, aes(x = equipment, fill = factor(age_class))) + 
+geom_bar(position = "fill") +
+  ggtitle("Distribution of age classes for different equipment") +
+  labs(x = "Equipment", y = "Cummulative Percentage of Usage") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(fill=guide_legend(title = "Age Class"))
+```
+
+From the above bar plot, we see that the distribution of age classes remains almost constant across the equipment types - Raw and Single-ply. 
+
+An intersting thing is that people between ages 16 to 19 prefer to perform lifts with bare knees or knee sleeves. 
+
+There is no indication that the usage of equipment is being impacted by the persons age as the distribution of age classes appears to be constant across different equipment types. We do not have enough information to comment on the distribution of age classes using wraps.
+
+Let us now look at how using bodyweight is impacting the total weight lifted using different equipments. 
+
+```{r warning=FALSE, message=FALSE}
+ggplot(data = ipf_main_SBD, aes(bodyweight,totalweight)) + 
+  geom_point() +
+  facet_wrap(~equipment) +
+  geom_smooth(method = "auto") +
+  ggtitle("Impact of equipment usage and bodyweight on Total Weight Lifted") +
+  labs(x = "Bodyweight", y = "totalweight") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+From the above plots, we can clearly see that there is an increase in the total weight lifted using single-ply equipment when compared to raw weight lifting. This suggests a strong correlation between total weight lifting capacity and equipment usage. 
+
+Another intersting observation is that the increase in total weight lifted is almost negligible when body weight increases beyond 90kgs. Further, We will try to statistically prove whether there is strong relation between total weight lifted and equipment usage through hypothesis testing.
+
+Let us create two subsets, one for single-ply equipment weight lifting and the other for  raw weight lifting. Let us perform Welch Two Sample test to prove that the difference between the means for two samples is greater than zero. 
+
+```{r warning=FALSE, message=FALSE}
+ipf_singleply <- ipf_main_SBD %>% 
+           group_by(equipment) %>% 
+           filter(equipment == "Single-ply")
+ipf_raw <- ipf_main_SBD %>% 
+           group_by(equipment) %>% 
+           filter(equipment == "Raw")
+t.test(ipf_singleply$totalweight, ipf_raw$totalweight, alternative = "greater")
+```
+
+From the results of the tests, we notice that alternative hypothesis i.e., the difference between the means for two samples, using single-ply and raw weight lifting, is greater than zero, is true. We can conclude that the average total weight lifted is higher using an equipment like single-ply when compared to raw weight lifting.
+
+<br>
+
+Let us now plot a barplot to observe the distribution of usage of equipment among male and female weight lifters. 
+
+```{r warning=FALSE, message=FALSE}
+ipf_4 <- ipf_main %>% 
+  group_by(sex, equipment) %>% 
+   summarise(count=n())
+ggplot(data = ipf_main, aes(x = sex,fill = factor(equipment))) +
+  geom_bar(position = "fill") +
+  ggtitle("Distribution of Equipment usage among male and female weight lifters") +
+  labs(x = "Sex", y = "Cummulative Percentage of Usage") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(fill=guide_legend(title = "Equipment"))
+```
+
+From the above barplot, we observe that the lifters of both the genders prefer to use single-ply equipment more than raw. We can notice that there is only a slight difference in percentage of  usage of single-ply equipment between males and females.
+
+Further, Let us also look at the impact of equipment usage on weight lifting capacity stands true for both the genders. We will perform hypothesis tests to prove that the average total weight lifted using single-ply equipment is greater than raw weight lifting for both male and female lifters.
+
+```{r warning=FALSE, message=FALSE}
+ipf_singleply_male <- ipf_singleply %>% 
+           group_by(sex) %>% 
+           filter(sex == "M")
+ipf_raw_male <- ipf_raw %>% 
+           group_by(sex) %>% 
+           filter(sex == "M")
+t.test(ipf_singleply_male$totalweight, ipf_raw_male$totalweight, alternative = "greater")
+```
+
+From the above results, we see that the usage of single ply equipment by males increases the amount of weight lifted by them, which is in line with the overall population. 
+
+
+```{r warning=FALSE, message=FALSE}
+ipf_singleply_female <- ipf_singleply %>% 
+           group_by(sex) %>% 
+           filter(sex == "F")
+ipf_raw_female <- ipf_raw %>% 
+           group_by(sex) %>% 
+           filter(sex == "F")
+t.test(ipf_singleply_female$totalweight, ipf_raw_female$totalweight, alternative = "greater")
+```
+
+We see similar behavior among females as well. There are no surprises here.
+
+<br>
+
+Let us try to profile which section of population tend to get disqualified from various meets. We will start off by looking at the gender - 
+
+```{r Who are likely to get disqualified, warning=FALSE, message=FALSE}
+ipf_main %>% 
+  filter(position == "DQ") %>% 
+  group_by(sex) %>% 
+  ggplot(aes(sex), fill = factor(name)) +
+  geom_bar(position = "dodge") +
+  ggtitle("Distribution of disqualified people by sex") +
+  labs(x = "Sex", y = "Count of Disqualification Instances") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+We see that instances of males being disqualified are 4 times more likely as compared to females. Let us see if the number of males being disqualified is being driven by a certain age group.
+
+```{r warning=FALSE, message=FALSE}
+
+ipf_main %>% 
+  filter(position == "DQ", sex == "M") %>% 
+  group_by(age_class) %>% 
+  ggplot(aes(age_class), fill = factor(name)) +
+  geom_bar(position = "dodge") +
+  ggtitle("Distribution of disqualified males by age class") +
+  labs(x = "Age Class", y = "Count of Disqualification Instances") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+A major chunk of disqualification instances occur in the age group 24 - 34 followed by the age group 20 - 23.
+
+Now, let us see if they happen in the same meet or distributed between different meets.
+
+```{r warning=FALSE, message=FALSE}
+
+ipf_main %>% 
+  filter(position == "DQ") %>% 
+  group_by(meet_name) %>% 
+  ggplot(aes(meet_name), fill = factor(name)) +
+  geom_bar(position = "dodge") +
+  coord_flip() +
+  ggtitle("Distribution of disqualified people across meets") +
+  labs(x = "Meet Name", y = "Count of Disqualification Instances") +
+  theme(plot.title = element_text(hjust = 0.9))
+
+```
+
+A lot of disqualifications occur in "World bench press championship" followed by worlds masters powerlifting championship and Men's world powerlifting championship.
+
+Now let us see if the bodyweight or age of the person impacts the final position of that person in the meet. We will look at the correlation values to check this.
+
+```{r Bodyweight versus position}
+
+ipf_main_subset1 <- ipf_main %>% 
+  filter(position != "DD" , position != "DQ" , position != "G") %>% 
+  mutate(position_new <- as.numeric(position))  %>% 
+  rename(position_new = "position_new <- as.numeric(position)") 
+
+cor(ipf_main_subset1$bodyweight, 
+    ipf_main_subset1$position_new, use = "complete.obs")
+
+cor(ipf_main_subset1$age, 
+    ipf_main_subset1$position_new, use = "complete.obs")
+```
+
+We only consider the numeric values of the position variable to check if there is any correlation between the position and bodyweight of the person. The correlation values are very low which suggests that there is no direct impact of bodyweight on the position.
+
+Let us now observe the distribution of weight lifters by sex across various meets.
+
+```{r Gender split in meets, warning=FALSE, message=FALSE}
+ipf_main %>% 
+  ggplot(aes(meet_name, fill = factor(sex))) + 
+  geom_bar(position = "fill") +
+  ggtitle("Distribution of weight lifters by sex across meets") +
+  labs(x = "Meet Name", y = "Gender Split Percentage") +
+  theme(plot.title = element_text(hjust = 0.8)) +
+  guides(fill=guide_legend(title = "Sex")) +
+  coord_flip() 
+```
+
+Males participation is significantly greater than females participation in meets such as "world disabled bench press championship" and "world masters powerlifting championship". One interesting thing is that there is higher male participation in all the bench press championships.
+
+Let us add a year,month and date column which will help us look at trends over time.
+
+```{r warning=FALSE, message=FALSE}
+ipf_main <- ipf_main %>% 
+   mutate("Year" <- year(lubridate::ymd(meet_date)),
+          "Month" <- month(lubridate::ymd(meet_date)),
+          "YearMonth" <- ymd(paste(Year,"-",Month,"-","01")))
+colnames(ipf_main)[16] <- "Year"
+colnames(ipf_main)[17] <- "Month"
+colnames(ipf_main)[18] <- "YearMonth"
+  
+```
+
+Let us see if participation by gender is varying over time. As there are multiple meets - we will look at the top 3 meets by participation
+
+```{r warning=FALSE, message=FALSE}
+freq_count <- ipf_main %>% 
+  group_by(meet_name) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+
+kable(head(freq_count, n = 3))
+
+ipf_main %>% 
+  filter(meet_name == "World Bench Press Championships") %>% 
+  group_by(Year) %>% 
+  ggplot(aes(Year, fill = factor(sex))) + 
+  geom_bar(position = "fill") +
+   coord_flip() +
+  ggtitle("Gender variation across years", 
+          subtitle = "World Bench Press Championships") +
+  labs(x = "Year", y = "Gender Split Percentage") +
+    theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust=0.5)) +
+  guides(fill=guide_legend(title = "Sex"))
+  
+          
+ipf_main %>% 
+  filter(meet_name == "World Classic Powerlifting Championships") %>% 
+  group_by(Year) %>% 
+  ggplot(aes(Year, fill = factor(sex))) + 
+  geom_bar(position = "fill") +
+   coord_flip() +
+  ggtitle("Gender variation across years", 
+          subtitle = "           World Classic Powerlifting Championships") +
+  labs(x = "Year", y = "Gender Split Percentage") +
+   theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust=0.4)) +
+  guides(fill=guide_legend(title = "Sex"))
+
+ipf_main %>% 
+  filter(meet_name == "World Masters Bench Press Championships") %>% 
+  group_by(Year) %>% 
+  ggplot(aes(Year, fill = factor(sex))) + 
+  geom_bar(position = "fill") +
+   coord_flip() +
+  ggtitle("Gender variation across years", 
+          subtitle = "           World Masters Bench Press Championships") +
+  labs(x = "Year", y = "Gender Split Percentage") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust=0.4)) +
+  guides(fill=guide_legend(title = "Sex"))
+ 
+```
+
+We looked at the top 3 meets by participation and below are the findings - 
+
+* **World Bench Press Championships** - The male participation percentages are highly fluctuating and the male participation continues to be 60% or higher for most of the years starting from 1990. 
+
+* **World Classic Powerlifting Championships** - There is a visible increase in women participation from 2013. 
+
+* **World Masters Bench Press Championships** - The male participation is on the higher scale from 2000, with a slight improvement being shown in the last 3 to 4 years.
+
+Let us now plot a barplot to observe the distribution of powerlifter's Age Classes across various meets they participated. 
+
+```{r warning = FALSE, message=FALSE}
+
+ggplot(data = ipf_main, aes(x = meet_name,fill = factor(age_class))) +
+  geom_bar(position = "fill") +
+  ggtitle("Distribution of Age Classes across various Meets") +
+  labs(x = "Meet Name", y = "Cummulative Percentage") +
+  theme(plot.title = element_text(hjust = 1)) +
+  guides(fill=guide_legend(title = "Age Class")) +
+  coord_flip()
+```
+
+From the above graph, we observe that the most of the participants across various meets belong to the 18-39 yrs age group. Interestingly, we can see that in 5 of these meets, there is significant participation of powerlifters belonging to the 40-64 yrs age group.
+
+<br>
+
+```{r warning=FALSE, message=FALSE}
+ipf_main %>%
+group_by(Year) %>%
+  summarize(count= n()) %>%
+  ggplot(aes(x = Year, y = count)) +
+  geom_line() +
+  ggtitle("Trend of Participation over time") +
+  labs(x = "Year", y = "Participation COunt") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+We see a an increase in participation of powerlifting over the years, Although the rise has been slow in the initial few years, it has really picked up in the last 10 years.
+
+We can check if this is the case with both males and females -
+
+```{r warning=FALSE, message=FALSE}
+ipf_main %>%
+  filter(sex == "M") %>% 
+  group_by(Year) %>%
+  summarize(count= n()) %>%
+  ggplot(aes(x = Year, y = count)) +
+  geom_line() +
+  ggtitle("Trend of Participation over time for males") +
+  labs(x = "Year", y = "Participation Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+ipf_main %>%
+  filter(sex == "F") %>% 
+  group_by(Year) %>%
+  summarize(count= n()) %>%
+  ggplot(aes(x = Year, y = count)) +
+  geom_line() +
+  ggtitle("Trend of Participation over time for females") +
+  labs(x = "Year", y = "Participation Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+We see that the increase in participation for females has been higher in the recent 10 years as compared to the steady increase in the participation of males.
+
+<br>
+
+One other interesting thing to see is if the lifting capacity of males and females have increased over the years 
+
+```{r warning=FALSE, message=FALSE}
+ipf_main_SBD <- ipf_main_SBD %>% 
+   mutate("Year" <- year(lubridate::ymd(meet_date)),
+          "Month" <- month(lubridate::ymd(meet_date)),
+          "YearMonth" <- ymd(paste(Year,"-",Month,"-","01")))
+colnames(ipf_main_SBD)[17] <- "Year"
+colnames(ipf_main_SBD)[18] <- "Month"
+colnames(ipf_main_SBD)[19] <- "YearMonth"
+
+ipf_main_SBD %>% 
+  filter(sex == "M") %>% 
+  group_by(Year) %>% 
+  summarise(avg_weight = mean(totalweight)) %>% 
+  ggplot(aes(x = Year)) + 
+  geom_line(aes(y = avg_weight)) +
+  labs(x= "Year", y = "Mean Total Weight Lifted") +
+  ggtitle("Average weight lifted over time for males") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ipf_main_SBD %>% 
+  filter(sex == "F") %>% 
+  group_by(Year) %>% 
+  summarise(avg_weight = mean(totalweight)) %>% 
+  ggplot(aes(x = Year)) + 
+  geom_line(aes(y = avg_weight)) +
+  labs(x= "Year", y = "Mean Total Weight Lifted") +
+  ggtitle("Average weight lifted over time for females") +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+  
+
+```
+
+These graphs show that the average weight lifted has been highly fluctuating for males in the last 40 years. However, for females - the average weight lifted has been trending upwards from 1980 till 2009 and then shows a declining trend. A thing which stands out here is that, the year 2009 is when women had shown peak performance in powerlifting over the last 40 years.
+
+</font>
+
+#### **4.3 Modeling**
+
+<font size = "3">
+
+**Methodology**
+
+We will subset the dataset to just include event SBD as it has weight lifts across all 3 events. The reason we do this is to use the response variable as total weight lifted and reduce skew to the maximum possible extent at the same time. 
+
+We currently have ~27k observations and we get rid of NA values which will reduce the number of observations by ~3.5K. As we are still left with ~24k observations, which are good enough to fit a regression model - we go ahead and omit the NA values.
+
+Then, we further subset to just include variables which makes sense. The variables which we want to include which could have a possible impact on the total weight lifted are - sex, equipment, age, bodyweight and total_weight. So,we add in the variable total_weight to this subset - which is the sum of weights lifted in deadlift, bench and squat.
+
+We will have to convert the variables sex, equipment to factors to be able to include them in the lm function. 
+
+We then choose a base model with the help of backward elimination. The scope for this procedure is between an intercept model and a model with all the variables upto the inclusion of all 2 - way interactions.
+
+```{r Linear Regression, warning=FALSE, message=FALSE}
+
+ipf_main_subset2 <- ipf_main %>% 
+  filter(event == "SBD") 
+
+ipf_main_subset2 <- ipf_main_subset2 %>% 
+  dplyr::select(sex, equipment, age, bodyweight, best3squat, best3deadlift, best3bench) %>% 
+  group_by(sex, equipment, age, bodyweight, best3squat, best3deadlift, best3bench)
+
+ipf_main_subset2 <- na.omit(ipf_main_subset2)
+
+ipf_main_subset2 <- ipf_main_subset2 %>% 
+  mutate(total_weight <- best3squat + best3deadlift + best3bench)
+colnames(ipf_main_subset2)[8] <- "totalweight"
+
+ipf_main_subset2 <- ipf_main_subset2 %>% 
+  group_by(sex, equipment, age, bodyweight, totalweight) %>% 
+  dplyr::select(sex, equipment, age, bodyweight, totalweight) %>% 
+  ungroup()
+
+ipf_main_subset2$sex <- as.factor(ipf_main_subset2$sex)
+ipf_main_subset2$equipment <- as.factor(ipf_main_subset2$equipment)
+
+fit_min <- lm(totalweight ~ 1, data = ipf_main_subset2)
+#summary(fit_min)
+fit_max <- lm(totalweight ~ .^2, data = ipf_main_subset2)
+#summary(fit_max)
+fit_be <- step(fit_max, direction = "backward", 
+             trace = 0, k = log(nrow(ipf_main_subset2)))
+```
+
+Once we performed the necessary data cleaning and have fit the model, let us define some functions to look at the model metrics such as PRESS residuals, AIC, Adj. R^2 which will help us understand the accuracy or fit of the model.
+
+```{r Function_Definition }
+PRESS <- function(object, ...) {
+  if(!missing(...)) {
+    res <- sapply(list(object, ...), FUN = function(x) {
+      sum(rstandard(x, type = "predictive") ^ 2)
+    })
+    names(res) <- as.character(match.call()[-1L])
+    res
+  } else {
+    sum(rstandard(object, type = "predictive") ^ 2)
+  }
+}
+
+modelMetrics <- function(object, ...) {
+  if(!missing(...)) {
+    res <- sapply(list(object, ...), FUN = function(x) {
+      c("AIC" = AIC(x), "BIC" = BIC(x), 
+        "adjR2" = summary(x)$adj.r.squared,
+        "RMSE"  = sigma(x), "PRESS" = PRESS(x), 
+        "nterms" = length(coef(x)))
+    })
+    colnames(res) <- as.character(match.call()[-1L])
+    res
+  } else {
+    c("AIC" = AIC(object), "BIC" = BIC(object), 
+      "adjR2" = summary(object)$adj.r.squared, 
+      "RMSE"  = sigma(object), "PRESS" = PRESS(object),
+      "nterms" = length(coef(object)))
+  }
+}
+
+kable(round(modelMetrics(fit_be),3))
+summary(fit_be)
+(RMSE <- sqrt(get_mse(fit_be)))
+
+```
+
+The RMSE is slightly high at ~91 and adj. R^2 is around 0.75 whuch tells that ~75% of the variability of the response being explained with these predictors. Let us look at the diagnostics to understand the problem better before we take a call on the model. 
+
+Let us begin by looking at the fitted vs studentized residual plot and the QQ plots to check for problems such as non-constant variance and non-normality.
+
+```{r warning=FALSE, message=FALSE}
+
+ipf_subset_stats <- ipf_main_subset2 %>%
+  lm(totalweight ~ sex + equipment + age + bodyweight + 
+    sex:age + sex:bodyweight + equipment:bodyweight + age:bodyweight, data = .) %>%
+  broom::augment() %>%
+  mutate(row_num = 1:n())
+
+# Fitted vs Residuals
+ggplot(ipf_subset_stats, aes(x = .fitted, y = .std.resid)) +
+  geom_point(alpha = 0.1) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red2") +
+  geom_hline(yintercept = c(-2, 2), linetype = "dotted") +
+  # geom_smooth(color = "forestgreen", alpha = 0.1, se = FALSE) +
+  xlab("Fitted value") +
+  ylab("Studentized residual") +
+  theme_light() +
+  ggtitle("Fitted values vs residuals") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Normality check for residuals
+ggplot(ipf_subset_stats, aes(sample = .std.resid)) +
+  geom_qq(alpha = 0.1) +
+  geom_qq_line(linetype = "dashed", color = "red2") +
+  xlab("Theoretical quantile") +
+  ylab("Sample quantile") +
+  theme_light() +
+  ggtitle("Normality check for residuals") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# serial correlation check for residuals
+ggplot(ipf_subset_stats, aes(x = row_num, y = .std.resid)) +
+  geom_point(alpha = 0.3) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red2") +
+  xlab("Index") +
+  ylab("Stundentized residual") +
+  theme_light() +
+  ggtitle("Serial correlation check for residuals") +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+
+```
+
+We see that this fit has a slight problem with non-constant variance and QQ plot shows that it is not perfectly normal and has some skewness towards the left. We do not see much of an issue with serial correlation although there is a time aspect to this data, which is a good thing. We have achieved a decent fit of the model but let us take another shot to fix the non - constant variance to some extent .
+
+We will apply box-cox transformation on the response variable to fix this and then look at the residual plot and model metrics once again.
+
+```{r box-cox transformation, warning=FALSE, message=FALSE}
+
+bc <- MASS::boxcox(totalweight ~ sex + equipment + age + bodyweight + 
+    sex:age + sex:bodyweight + equipment:bodyweight + age:bodyweight, data = ipf_main_subset2)
+
+(lambda <- bc$x[which.max(bc$y)])
+ipf_main_subset2$totalweight <- ((ipf_main_subset2$totalweight ^ lambda) - 1) / lambda
+
+ipf_subset_transformed_stats <- ipf_main_subset2 %>%
+  lm(totalweight ~ sex + equipment + age + bodyweight + 
+  sex:age + sex:bodyweight + equipment:bodyweight + age:bodyweight, data = .) %>% 
+  broom::augment() %>%
+  mutate(row_num = 1:n())
+
+ggplot(ipf_subset_transformed_stats, aes(x = .fitted, y = .std.resid)) +
+  geom_point(alpha = 0.1) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red2") +
+  geom_hline(yintercept = c(-2, 2), linetype = "dotted") +
+  # geom_smooth(color = "forestgreen", alpha = 0.1, se = FALSE) +
+  xlab("Fitted value") +
+  ylab("Studentized residual") +
+  theme_light() +
+  ggtitle("Fitted values vs residuals") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+fit_step_transformed <- lm(totalweight ~ sex + equipment + age + bodyweight + 
+    sex:age + sex:bodyweight + equipment:bodyweight + age:bodyweight, data = ipf_main_subset2)
+summary(fit_step_transformed)   
+(RMSE <- sqrt(get_mse(fit_step_transformed)))
+kable(round(modelMetrics(fit_step_transformed),3))
+kable(vif(fit_step_transformed))
+
+
+```
+
+We see that the box-cox transformation has fixed the violation of non-constant variance to an extent. A good outcome of this transformation is that, we managed to decrease the BIC by 44% and and RMSE by ~92% (New RMSE: 6.65). In addition, the VIF are seems to be in range and thus, we can conclude that this is indeed a good fit for the model for this phase of analysis.
+
+**Final Model** 
+
+The model which explains  the change in the total weight lifted by the power lifter is - 
+
+$$totalweight: sex + equipment + age + bodyweight + 
+          sex:age + sex:bodyweight + equipment:bodyweight + age:bodyweight$$
+
+The parameters for each of these predictor variables is shown below - 
+
+```{r warning=FALSE, message=FALSE}
+Model_parameters <- read.csv("modelparameters.csv",stringsAsFactors = FALSE)
+Model_parameters$Estimate <- round(Model_parameters$Estimate,2)
+Model_parameters$Std_Error <- round(Model_parameters$Std_Error,2)
+kable(Model_parameters)
+```
+
+According to the coefficients, we see that the parameters which have the most impact are sex and equipment, which is in line with our prior EDA.
+
+<br>
+
+**Note** - The next phase of the project will solely focus on improving the predective capability of the model.
+
+</font size>
+
+## **5. Results**
+
+<font size="3"> 
+<br>
+**PROBLEM STATEMENT:**
+
+The main focus of our analysis is to help both the informed and uninformed readers understand the impact of key factors such as age, sex, bodyweight and equipment usage on the weight lifted across different kinds of powerlifts.
+
+<br>
+
+**SOLUTION METHODOLOGY:**
+
+For better understanding of the impact of these variables, we leveraged graphics to observe the trends of total weight lifted by male and female weight lifters belonging to different age classes . We used categorical variables such as equipment , sex, age class and meet names, to add in context to the analysis and aid in understanding.
+
+We also performed hypothesis testing to statistically prove few observations we saw from the visuals. Finally, we concluded our analysis by fitting a regression model to be able to quantify the relationship of various factors and predict the total amount of weight that can be lifted when provided with input variables such as sex, age, bodyweight and equipment.
+
+<br>
+
+**FINDINGS & INSIGHTS:**
+
+* Equipment and sex are the 2 most important parameters that influence the powerlifting capacity
+* Although there is a decline in the weight lifting capacity after 40 years of age, we see people over 40 also still are able to lift considerably heavier weights
+* The decline with age is more profound in squat lifting as compared to bench and deadlift categories 
+* The decline in weight lifting capacity starts at 30 years for females as compared to 35 years for males. Also this decline is faster as age increases for female power lifters
+* Squat powerlifting has the maximum difference in powerllifting capacities between females and males
+* Powelifters belonging to the age group of 16 to 19 prefer to perform powerlifting with bare knees or knee sleeves
+* The Average total weight lifted using single-ply equipment is greater than that of raw weight lifting.
+* An interesting observation is that the increase in total weight lifted is not proportional to the bodyweight of the person when the bodyweight is greater than 90 kgs
+* Male powerlifters are 4 times more likely to get disqualified
+  * People in the age group of 24 to 34 have higher disqualification instances as compared to other age groups
+  * A lot of disqualification instances occur in "World Bench Press Championships"
+* Certain meets have significantly higher male participation as compared to females
+  * World Disabled Bench Press Championship
+  * World Masters Powerlifting Championship
+* In general, there is higher male particpation (> 60%) in all the bench press championships from 1990
+* The female participation has seen an significant increase in participation in "World Classic Powerlifting Championships" from  2013
+* Most of the participants in various meets belong to the age groups of 18 to 39 years - This can be considered the peak period for powerlifters
+* Participation in powerlifting has significantly increased in the last 10 years. Interstingly, female participation has also increased in the last 10 years
+* The average weight lifted by females has constantly increased from 1980 to 2009, with the highest average weight lifted being in the year 2009.
+
+
+<br>
+
+**IMPLICATIONS:**
+
+This report shows how powerlifting as a sport is gaining traction. It analyzes the historic data to understand what is the best age to achieve peak performance in powerlifting and proves that people over 50 years of age can also lift considerable weights. The reader also understands the section of people who are more likely to get disqualified and that age/ bodyweight do not have any impact on the position of the person in the meet.
+
+The reader is also equipped with a mathematic eqantion to predict the total weight that can be lifted by a powerlifter.
+
+<br>
+
+**LIMITATIONS:**
+
+This report contains a detailed analysis on the factors impacting the performance of powerlifters and how powerlifting, as a sport has evolved over the years. However, this analysis was conducted on a smaller dataset and not on the [full dataset](https://openpowerlifting.org/data). The additional data might give us a little more insight into the analysis. (There is an equally likely chance that it might not, but definitely worth a try).
+
+The modeling part can be improved upon further (This will be done in the next phase of the project).
+
+* Improvement can be in terms of different algrithms tried to improve the predictive capability
+* It can also mean making the model more interpretable, which will make it more actionable and comprehendible for the consumer of the report
+
+</font size>
+
