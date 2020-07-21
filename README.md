@@ -1,5 +1,5 @@
 # Exploratory Analysis on Power Lifting
-Analyze the various factors affecting the ability of the person to do power-lifting in R. This project is all about understanding this exciting and intense sport better
+Analyze the various factors affecting the ability of a person to do power-lifting. This project (done in R) is all about understanding this exciting and intense sport better
 
 ## What is Power-lifting?
 
